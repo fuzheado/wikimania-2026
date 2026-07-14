@@ -197,6 +197,23 @@
     margin-top: 0.4rem;
     display: block;
   }
+  .session-card .eventyay-link {
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .session-card .eventyay-link:hover {
+    background: var(--accent);
+    color: white;
+  }
   .session-card .badge {
     font-size: 0.7rem;
     padding: 0.15rem 0.5rem;
@@ -421,6 +438,8 @@ function render() {
       ? `<div class="abstract-preview">${escapeHtml(s.abstract)}</div>`
       : '';
 
+    const eventyayLink = s.url ? `<a class="eventyay-link" href="${s.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on eventyay →</a>` : '';
+
     return `
       <div class="session-card ${cssClass}" onclick="toggleExpand(${s.id})" id="card-${s.id}">
         <div class="track-dot ${cssClass}"></div>
@@ -433,8 +452,9 @@ function render() {
         </div>
         ${speakersHtml}
         ${abstractPreview}
-        ${s.abstract && s.abstract.length > 200 ? 
+        ${s.abstract && s.abstract.length > 200 ?
           `<span class="expand-hint">${isExpanded ? '▲ Click to collapse' : '▼ Click to read more'}</span>` : ''}
+        ${eventyayLink}
       </div>
     `;
   }).join('');
