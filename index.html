@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wikimania 2026 — Schedule Explorer</title>
+<style>
+  :root {
+    --bg: #f8f9fa;
+    --card: #fff;
+    --text: #212529;
+    --muted: #6c757d;
+    --border: #dee2e6;
+    --accent: #3366cc;
+    --accent-light: #eaf0fa;
+    --tag-bg: #e8edf3;
+    --tag-text: #495057;
+    --ai: #764ba2;
+    --research: #e67e22;
+    --community: #27ae60;
+    --tech: #2980b9;
+    --education: #e74c3c;
+    --governance: #8e44ad;
+    --glam: #16a085;
+    --meetup: #f39c12;
+    --ceremonies: #2c3e50;
+    --wild: #d35400;
+    --newgen: #1abc9c;
+    --unspec: #95a5a6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    color: white;
+    padding: 2rem 1.5rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+  }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.02em;
+  }
+  .header .subtitle {
+    font-size: 0.85rem;
+    opacity: 0.75;
+    margin-bottom: 1rem;
+  }
+  .search-box {
+    width: 100%;
+    padding: 0.7rem 1rem;
+    font-size: 1rem;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box::placeholder { color: rgba(255,255,255,0.5); }
+  .search-box:focus { border-color: rgba(255,255,255,0.6); }
+  
+  .filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 140px;
+    z-index: 99;
+  }
+  .filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+  }
+  .filter-group-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-right: 0.25rem;
+    font-weight: 600;
+  }
+  .filter-chip {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: white;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s;
+    color: var(--tag-text);
+  }
+  .filter-chip:hover { background: var(--accent-light); border-color: var(--accent); }
+  .filter-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
+  
+  .stats-bar {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+  }
+  .stats-bar strong { color: var(--text); }
+  
+  .results {
+    padding: 1rem 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 0.75rem;
+  }
+  .session-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    transition: box-shadow 0.2s, transform 0.15s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .session-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+  }
+  .session-card .track-dot {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .session-card .time-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.35rem;
+  }
+  .session-card h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    line-height: 1.35;
+    padding-right: 1.5rem;
+  }
+  .session-card .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .session-card .meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .session-card .speakers {
+    font-size: 0.78rem;
+    margin-bottom: 0.5rem;
+  }
+  .session-card .speakers a {
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .session-card .speakers a:hover { text-decoration: underline; }
+  .session-card .abstract-preview {
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .session-card.expanded .abstract-preview {
+    -webkit-line-clamp: unset;
+    display: block;
+  }
+  .session-card .expand-hint {
+    font-size: 0.7rem;
+    color: var(--accent);
+    margin-top: 0.4rem;
+    display: block;
+  }
+  .session-card .badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 600;
+    display: inline-block;
+  }
+  .badge-track {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+  .badge-not-recorded { background: #fff3cd; color: #856404; margin-left: 0.25rem; }
+  .badge-fr { background: #cce5ff; color: #004085; }
+  .badge-es { background: #f8d7da; color: #721c24; }
+  .badge-ar { background: #d4edda; color: #155724; }
+  
+  .no-results {
+    text-align: center;
+    padding: 3rem;
+    color: var(--muted);
+    grid-column: 1 / -1;
+  }
+  .no-results .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+  .track-colors { }
+  .track-AI { border-left-color: var(--ai); }
+  .track-Research { border-left-color: var(--research); }
+  .track-Community { border-left-color: var(--community); }
+  .track-Technology { border-left-color: var(--tech); }
+  .track-Education { border-left-color: var(--education); }
+  .track-Governance { border-left-color: var(--governance); }
+  .track-GLAM { border-left-color: var(--glam); }
+  .track-Meetup { border-left-color: var(--meetup); }
+  .track-Ceremonies { border-left-color: var(--ceremonies); }
+  .track-Wild { border-left-color: var(--wild); }
+  .track-NewGen { border-left-color: var(--newgen); }
+
+  @media (max-width: 600px) {
+    .results { grid-template-columns: 1fr; padding: 0.75rem; }
+    .header { padding: 1.25rem 1rem 1rem; }
+    .header h1 { font-size: 1.25rem; }
+    .filter-bar { padding: 0.5rem 1rem; top: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🏛️ Wikimania 2026 · Paris</h1>
+  <div class="subtitle">July 21–25 · Schedule Explorer</div>
+  <input type="text" class="search-box" id="search" placeholder="Search sessions, speakers, topics… e.g. 'AI', 'open education', 'Lydia Pintscher'">
+</div>
+
+<div class="filter-bar" id="filterBar">
+  <div class="filter-group">
+    <span class="filter-group-label">Day</span>
+    <div id="dayFilters"></div>
+  </div>
+  <div class="filter-group">
+    <span class="filter-group-label">Track</span>
+    <div id="trackFilters"></div>
+  </div>
+  <div class="filter-group">
+    <span class="filter-group-label">Lang</span>
+    <div id="langFilters"></div>
+  </div>
+  <div class="filter-group">
+    <span class="filter-group-label">Type</span>
+    <select id="typeFilter" style="font-size:0.75rem;padding:0.25rem;border-radius:4px;border:1px solid var(--border);">
+      <option value="">All types</option>
+    </select>
+  </div>
+  <button onclick="resetFilters()" style="font-size:0.75rem;padding:0.25rem 0.6rem;background:none;border:1px solid var(--border);border-radius:20px;cursor:pointer;margin-left:auto;">✕ Reset</button>
+</div>
+
+<div class="stats-bar" id="stats">Loading…</div>
+
+<div class="results" id="results"></div>
+
+<script src="wikimania2026_data.js"></script>
+<script>
+// ── State ──
+const data = window.WIKIMANIA_DATA;
+let activeFilters = { day: null, track: null, lang: null, type: '', speaker: null };
+let searchQuery = '';
+let expandedCards = new Set();
+
+// ── Track color mapping (for the left border dot) ──
+const trackCssClass = (track) => {
+  const t = (track || '').toLowerCase();
+  if (t.includes('artificial intelligence') || t.includes('ai')) return 'track-AI';
+  if (t.includes('research')) return 'track-Research';
+  if (t.includes('community')) return 'track-Community';
+  if (t.includes('technology')) return 'track-Technology';
+  if (t.includes('education')) return 'track-Education';
+  if (t.includes('governance')) return 'track-Governance';
+  if (t.includes('glam')) return 'track-GLAM';
+  if (t.includes('meetup')) return 'track-Meetup';
+  if (t.includes('ceremon')) return 'track-Ceremonies';
+  if (t.includes('wild')) return 'track-Wild';
+  if (t.includes('new gen')) return 'track-NewGen';
+  return '';
+};
+
+// ── Build filter UI ──
+function buildFilters() {
+  const dayDiv = document.getElementById('dayFilters');
+  data.filters.days.forEach(d => {
+    const btn = document.createElement('span');
+    btn.className = 'filter-chip';
+    btn.textContent = d.label;
+    btn.onclick = () => toggleFilter('day', d.value, btn);
+    dayDiv.appendChild(btn);
+  });
+
+  const trackDiv = document.getElementById('trackFilters');
+  data.filters.tracks.forEach(t => {
+    const btn = document.createElement('span');
+    btn.className = 'filter-chip';
+    btn.textContent = t;
+    btn.onclick = () => toggleFilter('track', t, btn);
+    trackDiv.appendChild(btn);
+  });
+
+  const langDiv = document.getElementById('langFilters');
+  data.filters.languages.forEach(l => {
+    const btn = document.createElement('span');
+    btn.className = 'filter-chip';
+    btn.textContent = l.toUpperCase();
+    btn.onclick = () => toggleFilter('lang', l, btn);
+    langDiv.appendChild(btn);
+  });
+
+  const typeSel = document.getElementById('typeFilter');
+  data.filters.types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    typeSel.appendChild(opt);
+  });
+  typeSel.onchange = () => {
+    activeFilters.type = typeSel.value;
+    render();
+  };
+}
+
+function toggleFilter(category, value, el) {
+  if (activeFilters[category] === value) {
+    activeFilters[category] = null;
+    el.classList.remove('active');
+  } else {
+    // Deactivate siblings
+    el.parentElement.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    activeFilters[category] = value;
+    el.classList.add('active');
+  }
+  render();
+}
+
+function resetFilters() {
+  activeFilters = { day: null, track: null, lang: null, type: '', speaker: null };
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('typeFilter').value = '';
+  document.getElementById('search').value = '';
+  searchQuery = '';
+  render();
+}
+
+// ── Search & Filter logic ──
+function matches(session) {
+  if (activeFilters.day && session.day !== activeFilters.day) return false;
+  if (activeFilters.track && session.track !== activeFilters.track) return false;
+  if (activeFilters.lang && session.language !== activeFilters.lang) return false;
+  if (activeFilters.type && session.type !== activeFilters.type) return false;
+  if (activeFilters.speaker) {
+    const hasSpeaker = session.speakers.some(s => 
+      s.name.toLowerCase().includes(activeFilters.speaker.toLowerCase())
+    );
+    if (!hasSpeaker) return false;
+  }
+
+  if (searchQuery) {
+    const haystack = [
+      session.title, session.track, session.type, session.room,
+      session.abstract, session.day_label,
+      ...session.speakers.map(s => s.name + ' ' + (s.bio || ''))
+    ].join(' ').toLowerCase();
+    // Split query into tokens; ALL tokens must match (AND logic)
+    const tokens = searchQuery.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    for (const token of tokens) {
+      if (!haystack.includes(token)) return false;
+    }
+  }
+  return true;
+}
+
+// ── Render ──
+function render() {
+  const filtered = data.sessions.filter(matches);
+  document.getElementById('stats').innerHTML = 
+    `Showing <strong>${filtered.length}</strong> of ${data.sessions.length} sessions` +
+    (searchQuery ? ` matching "<strong>${escapeHtml(searchQuery)}</strong>"` : '');
+
+  const container = document.getElementById('results');
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="no-results"><div class="icon">🔍</div><p>No sessions found. Try different filters.</p></div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(s => {
+    const isExpanded = expandedCards.has(s.id);
+    const cssClass = trackCssClass(s.track);
+    const recordedBadge = s.recorded ? '' : '<span class="badge badge-not-recorded">not recorded</span>';
+    const langBadge = s.language !== 'en' ? `<span class="badge badge-${s.language}">${s.language.toUpperCase()}</span>` : '';
+    const speakersHtml = s.speakers.length > 0 
+      ? '<div class="speakers">👤 ' + s.speakers.map(sp => 
+          `<a onclick="event.stopPropagation();filterBySpeaker('${escapeAttr(sp.name)}')">${escapeHtml(sp.name)}</a>`
+        ).join(', ') + '</div>'
+      : '';
+    const abstractPreview = s.abstract 
+      ? `<div class="abstract-preview">${escapeHtml(s.abstract)}</div>`
+      : '';
+
+    return `
+      <div class="session-card ${cssClass}" onclick="toggleExpand(${s.id})" id="card-${s.id}">
+        <div class="track-dot ${cssClass}"></div>
+        <span class="badge badge-track" style="background:var(--tag-bg);color:var(--tag-text);font-size:0.65rem;">${escapeHtml(s.track)}</span>
+        <div class="time-badge">📅 ${s.day_label} · ${s.start} · ${formatDuration(s.duration)}</div>
+        <h3>${escapeHtml(s.title)} ${langBadge}${recordedBadge}</h3>
+        <div class="meta">
+          <span>📍 ${escapeHtml(s.room)}</span>
+          <span>📋 ${escapeHtml(s.type)}</span>
+        </div>
+        ${speakersHtml}
+        ${abstractPreview}
+        ${s.abstract && s.abstract.length > 200 ? 
+          `<span class="expand-hint">${isExpanded ? '▲ Click to collapse' : '▼ Click to read more'}</span>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleExpand(id) {
+  if (expandedCards.has(id)) {
+    expandedCards.delete(id);
+  } else {
+    expandedCards.add(id);
+  }
+  render();
+}
+
+function filterBySpeaker(name) {
+  activeFilters.speaker = name;
+  document.getElementById('search').value = name;
+  searchQuery = name;
+  // Clear other filters
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  activeFilters.day = null;
+  activeFilters.track = null;
+  activeFilters.lang = null;
+  activeFilters.type = '';
+  document.getElementById('typeFilter').value = '';
+  render();
+}
+
+function formatDuration(d) {
+  if (!d) return '';
+  const parts = d.split(':');
+  if (parts.length === 2) {
+    const h = parseInt(parts[0]), m = parseInt(parts[1]);
+    if (h > 0 && m > 0) return `${h}h ${m}m`;
+    if (h > 0) return `${h}h`;
+    return `${m}m`;
+  }
+  return d;
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function escapeAttr(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+// ── Init ──
+document.getElementById('search').addEventListener('input', (e) => {
+  searchQuery = e.target.value.trim();
+  activeFilters.speaker = null;
+  render();
+});
+
+buildFilters();
+render();
+</script>
+</body>
+</html>
