@@ -34,3 +34,16 @@ open index.html
 ```
 
 No build tools or `npm install` needed.
+
+## Refreshing data
+
+The data file can be regenerated from the live eventyay schedule API:
+
+```bash
+python3 refresh_data.py          # fetch and save
+python3 refresh_data.py --dry-run  # preview changes without saving
+```
+
+The script fetches `schedule.json` from eventyay and transforms it into the
+`window.WIKIMANIA_DATA` format the UI expects. No API key or authentication
+required.
