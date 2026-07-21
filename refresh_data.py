@@ -4,7 +4,8 @@ Fetch the Wikimania 2026 schedule from eventyay and save it as wikimania2026_dat
 
 Usage:
     python3 refresh_data.py          # fetch and save
-    python3 refresh_data.py --dry-run  # print stats only, don't write
+    python3 refresh_data.py --check     # check for updates, don't write
+    python3 refresh_data.py --dry-run   # print stats only, don't write
 """
 
 import json
@@ -148,7 +149,91 @@ def format_js(data, pretty=True):
     return f"window.WIKIMANIA_DATA = {inner};"
 
 
+def load_existing():
+    """Load the existing data file, or None if missing."""
+    if not os.path.exists(OUTPUT_FILE):
+        return None
+    with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
+        content = f.read().replace("window.WIKIMANIA_DATA = ", "").rstrip(";")
+    return json.loads(content)
+
+
+def check_for_changes(new_data, old_data):
+    """Compare new and old data. Return (has_changes, report_lines)."""
+    lines = []
+    has = False
+
+    if old_data is None:
+        lines.append("No existing data file — would create new.")
+        return True, lines
+
+    old_sessions = {s["id"]: s for s in old_data["sessions"]}
+    new_sessions = {s["id"]: s for s in new_data["sessions"]}
+
+    added = set(new_sessions) - set(old_sessions)
+    removed = set(old_sessions) - set(new_sessions)
+    common = set(new_sessions) & set(old_sessions)
+
+    if added:
+        has = True
+        lines.append(f"  + {len(added)} new session(s):")
+        for sid in sorted(added):
+            s = new_sessions[sid]
+            lines.append(f"      #{sid}  {s['title']}")
+
+    if removed:
+        has = True
+        lines.append(f"  - {len(removed)} removed session(s):")
+        for sid in sorted(removed):
+            s = old_sessions[sid]
+            lines.append(f"      #{sid}  {s['title']}")
+
+    # Check for changes in common sessions
+    changed = []
+    key_fields = ["title", "track", "type", "room", "start", "duration", "recorded"]
+    for sid in sorted(common):
+        old_s = old_sessions[sid]
+        new_s = new_sessions[sid]
+        diffs = []
+        for k in key_fields:
+            ov = old_s.get(k)
+            nv = new_s.get(k)
+            if ov != nv:
+                diffs.append(f"{k}: {ov!r} → {nv!r}")
+        if diffs:
+            changed.append((sid, new_s["title"], diffs))
+
+    if changed:
+        has = True
+        lines.append(f"  ~ {len(changed)} session(s) updated:")
+        for sid, title, diffs in changed[:20]:  # cap at 20 to avoid noise
+            lines.append(f"      #{sid}  {title}")
+            for d in diffs:
+                lines.append(f"          {d}")
+        if len(changed) > 20:
+            lines.append(f"      … and {len(changed) - 20} more")
+
+    # Filter-level changes
+    for fkey in ["tracks", "types", "languages", "rooms"]:
+        old_set = set(old_data["filters"].get(fkey, []))
+        new_set = set(new_data["filters"].get(fkey, []))
+        if old_set != new_set:
+            has = True
+            added_f = new_set - old_set
+            removed_f = old_set - new_set
+            if added_f:
+                lines.append(f"  + {fkey} added: {sorted(added_f)}")
+            if removed_f:
+                lines.append(f"  - {fkey} removed: {sorted(removed_f)}")
+
+    if not has:
+        lines.append("No changes detected.")
+
+    return has, lines
+
+
 def main():
+    check_mode = "--check" in sys.argv
     dry_run = "--dry-run" in sys.argv
 
     print("Fetching schedule from eventyay…")
@@ -163,6 +248,20 @@ def main():
     print(f"  Types:     {len(data['filters']['types'])}")
     print(f"  Languages: {data['filters']['languages']}")
     print(f"  Rooms:     {len(data['filters']['rooms'])}")
+
+    if check_mode:
+        print("\nComparing against existing data…")
+        old_data = load_existing()
+        has_changes, report = check_for_changes(data, old_data)
+        print()
+        for line in report:
+            print(line)
+        if has_changes:
+            print(f"\n⚠  Schedule has changed. Run without --check to update.")
+            sys.exit(1)
+        else:
+            print(f"\n✓  Schedule is up to date.")
+        return
 
     if dry_run:
         print("\n--dry-run: not writing file.")
