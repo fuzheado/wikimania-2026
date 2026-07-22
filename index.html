@@ -294,6 +294,7 @@
 
 <div class="results" id="results"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="wikimania2026_data.js"></script>
 <script>
 // ── State ──
@@ -435,7 +436,7 @@ function render() {
         ).join(', ') + '</div>'
       : '';
     const abstractPreview = s.abstract 
-      ? `<div class="abstract-preview">${escapeHtml(s.abstract)}</div>`
+      ? `<div class="abstract-preview">${marked.parse(s.abstract)}</div>`
       : '';
 
     const eventyayLink = s.url ? `<a class="eventyay-link" href="${s.url}" target="_blank" rel="noopener" onclick="event.stopPropagation()">View on eventyay →</a>` : '';
